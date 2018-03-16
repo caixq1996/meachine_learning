@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Mar 15 20:50:11 2018
-
 @author: 蔡欣强
 """
 
@@ -50,20 +49,34 @@ def choosebest(data):
     maxgain = 0.0
     bestfeature = -1
     bestpoint = -1.0
-    n = len(data[0]) - 1
     S = ent(data)
+#    print('data = ',data)
+    k = ceil(log(len(data[0]) - 1,2))
+#    k = len(data[0]) - 1
+    if len(data[0]) > 2:
+        Index = random.sample(list(range(len(data[0]) - 1)),k)
+    else:
+        Index = [0]
+#    print('index = ',Index,'k = ',k)
+#    for i in range(len(Index)):
+#        print('i = %d index[i] = %d'%(i,Index[i]))
+#    os.system("pause")
+    subdata = split_data(data,Index)
+#    print('subdata = ',subdata)
+    n = len(subdata[0])
+#    print('n = ',n)
     for i in range(n):
         curfeature = []
         for j in range(m):
-            curfeature.append(data[j][i])
+            curfeature.append(subdata[j][i])
         curfeature = set(curfeature)
         curfeature = list(curfeature)
         maxgain = 0.0
-        point_id = -1
         for j in range(len(curfeature) - 1):
             point = float(curfeature[j + 1] + curfeature[j]) / 2
-            p1 = float(j + 1) / m
-            p2 = float(m - j - 1) / m
+            Set = [[it for it in curfeature if it < point],[it for it in curfeature if it > point]]
+            p1 = float(len(Set[0])) / m
+            p2 = float(len(Set[1])) / m
             split = 0
             if p1 != 0:
                 split -= p1 * log(p1,2)
@@ -71,11 +84,15 @@ def choosebest(data):
                 split -= p2 * log(p2,2)
             if split == 0:
                 continue
-            gain = (S - p1 * ent(remove_feature(data,i,point,True)) - p2 * ent(remove_feature(data,i,point,False))) / split
+#            print('p1 = ',p1,'p2 = ',p2)
+#            print('ent1 = ',ent(remove_feature(data,Index[i],point,True)))
+            gain = (S - p1 * ent(remove_feature(data,Index[i],point,True)) - p2 * ent(remove_feature(data,Index[i],point,False))) / split
+#            print('gain = ',gain)
             if gain > maxgain:
                 maxgain = gain
-                bestfeature = i
+                bestfeature = Index[i]
                 bestpoint = point
+#    print('maxgain = ',maxgain)
     return bestfeature,bestpoint
         
         
@@ -108,14 +125,18 @@ def build(data,feature):
     if  len(data[0]) == 1:
         return majorityCnt(curlabel)
     i,point = choosebest(data)
-#    print('i = ',i,'j = ',j)
+    if i == -1:
+        return majorityCnt(curlabel)
+#    print('i = ',i,'point = ',point)
     bestfeature = feature[i]
     tree = {bestfeature : {}}
     del feature[i]
     newfeature = feature[:]
     newdata = remove_feature(data,i,point,True)
+#    print('newdata1 = ',newdata)
     tree[bestfeature][0] = build(newdata,newfeature)
     newdata = remove_feature(data,i,point,False)
+#    print('newdata2 = ',newdata)
     newfeature = feature[:]
     tree[bestfeature][point] = build(newdata,newfeature)
     return tree
@@ -146,9 +167,10 @@ feature = iris['feature_names']
 data, test_data, label, ans = train_test_split(x,y, test_size = 0.3)
 num = len(data)
 rf = []
-for i in range(5):
+for i in range(100):
+#    print('i = ',i)
     subdata = get_subsample(data,0.7,label)
-    print('subdata = ',subdata)
+#    print('subdata = ',subdata)
     test_feature = feature[:]
     rf.append(build(subdata,test_feature))
 #for tree in rf:
